@@ -28,6 +28,8 @@ class UpgradeSchema implements UpgradeSchemaInterface
     const TABLE_PERSONS_DETAILS = 'beckn_person_details';
     const TABLE_ITEM_FULFILLMENT_OPTIONS = 'beckn_item_fulfillment_options';
     const TABLE_ITEM_FULFILLMENT_OPTIONS_TIMES = 'beckn_item_fulfillment_options_times';
+    const TABLE_BECKN_EVENT_LOG = 'beckn_event_log';
+    const TABLE_SALES_ORDER = 'sales_order';
 
     public function upgrade(SchemaSetupInterface $setup, ModuleContextInterface $context)
     {
@@ -438,6 +440,135 @@ class UpgradeSchema implements UpgradeSchemaInterface
                 $installer->getConnection()->createTable($table);
                 $installer->endSetup();
             }
+        }
+
+        if (version_compare($context->getVersion(), '1.1.6', '<=') && !$setup->getConnection()->isTableExists(self::TABLE_BECKN_EVENT_LOG)) {
+            $installer = $setup;
+            $installer->startSetup();
+            $table = $installer->getConnection()
+                ->newTable($installer->getTable(self::TABLE_BECKN_EVENT_LOG))
+                ->addColumn("entity_id", Table::TYPE_INTEGER, null, ["identity" => true, "unsigned" => true, "nullable" => false, "primary" => true], "Entity Id")
+                ->addColumn("event_type", Table::TYPE_TEXT, 255, ["nullable" => false], "Event Type")
+                ->addColumn("event_name", Table::TYPE_TEXT, 255, ["nullable" => false], "Event Name")
+                ->addColumn("transaction_id", Table::TYPE_TEXT, 255, ["nullable" => false, "default" => 0], "Transaction Id")
+                ->addColumn("header_authorization", Table::TYPE_TEXT, null, ["nullable" => true, "default" => null], "Header Authorization")
+                ->addColumn("proxy_header_authorization", Table::TYPE_TEXT, null, ["nullable" => true, "default" => null], "Proxy Header Authorization")
+                ->addColumn("event_data", Table::TYPE_TEXT, null, ["nullable" => false, "default" => 0], "Event Data")
+                ->addColumn("response_data", Table::TYPE_TEXT, null, ["nullable" => false, "default" => 0], "Response Data")
+                ->addColumn('created_at', Table::TYPE_TIMESTAMP, null, ['nullable' => false, 'default' => Table::TIMESTAMP_INIT], 'Created At')
+                ->addColumn('updated_at', Table::TYPE_TIMESTAMP, null, ['nullable' => false, 'default' => Table::TIMESTAMP_INIT_UPDATE], 'Updated At')
+                ->setComment("Beckn Event Log");
+            $installer->getConnection()->createTable($table);
+            $installer->endSetup();
+        }
+
+        if (version_compare($context->getVersion(), '1.1.7', '<=')) {
+            $installer = $setup;
+            $installer->startSetup();
+            $connection = $installer->getConnection();
+            if ($connection->tableColumnExists(self::TABLE_SALES_ORDER, 'fulfillment_status') === false) {
+                $installer->getConnection()
+                    ->addColumn(
+                        $installer->getTable(self::TABLE_SALES_ORDER), 'fulfillment_status', [
+                            'type' => Table::TYPE_TEXT,
+                            'nullable' => true,
+                            'size' => 255,
+                            'default' => null,
+                            'comment' => 'Fulfillment Status',
+                        ]
+                    );
+                $installer->getConnection()
+                    ->addColumn(
+                        $installer->getTable(self::TABLE_SALES_ORDER), 'agent_name', [
+                            'type' => Table::TYPE_TEXT,
+                            'nullable' => true,
+                            'size' => 255,
+                            'default' => null,
+                            'comment' => 'Agent Name',
+                        ]
+                    );
+                $installer->getConnection()
+                    ->addColumn(
+                        $installer->getTable(self::TABLE_SALES_ORDER), 'agent_phone', [
+                            'type' => Table::TYPE_TEXT,
+                            'nullable' => true,
+                            'size' => 255,
+                            'default' => null,
+                            'comment' => 'Agent Phone',
+                        ]
+                    );
+                $installer->getConnection()
+                    ->addColumn(
+                        $installer->getTable(self::TABLE_SALES_ORDER), 'agent_temperature', [
+                            'type' => Table::TYPE_TEXT,
+                            'nullable' => true,
+                            'size' => 255,
+                            'default' => null,
+                            'comment' => 'Agent Temperature',
+                        ]
+                    );
+                $installer->getConnection()
+                    ->addColumn(
+                        $installer->getTable(self::TABLE_SALES_ORDER), 'tracking_link', [
+                            'type' => Table::TYPE_TEXT,
+                            'nullable' => true,
+                            'size' => 255,
+                            'default' => null,
+                            'comment' => 'Tracking Link',
+                        ]
+                    );
+            }
+            $installer->endSetup();
+        }
+
+        if (version_compare($context->getVersion(), '1.1.8', '<=')) {
+            $installer = $setup;
+            $installer->startSetup();
+            $installer->getConnection()
+                ->addColumn(
+                    $installer->getTable(self::TABLE_BECKN_EVENT_LOG), 'subscriber_id', [
+                        'type' => Table::TYPE_TEXT,
+                        'nullable' => true,
+                        'size' => 255,
+                        'after' => 'transaction_id',
+                        'default' => null,
+                        'comment' => 'Subscriber Id',
+                    ]
+                );
+            $installer->getConnection()
+                ->addColumn(
+                    $installer->getTable(self::TABLE_BECKN_EVENT_LOG), 'message_id', [
+                        'type' => Table::TYPE_TEXT,
+                        'nullable' => true,
+                        'size' => 255,
+                        'after' => 'subscriber_id',
+                        'default' => null,
+                        'comment' => 'Message Id',
+                    ]
+                );
+            $installer->getConnection()
+                ->addColumn(
+                    $installer->getTable(self::TABLE_BECKN_EVENT_LOG), 'error_code', [
+                        'type' => Table::TYPE_TEXT,
+                        'nullable' => true,
+                        'size' => 255,
+                        'default' => null,
+                        'after' => 'response_data',
+                        'comment' => 'Error Code',
+                    ]
+                );
+            $installer->getConnection()
+                ->addColumn(
+                    $installer->getTable(self::TABLE_BECKN_EVENT_LOG), 'acknowledgement_status', [
+                        'type' => Table::TYPE_TEXT,
+                        'nullable' => true,
+                        'size' => 255,
+                        'after' => 'response_data',
+                        'default' => null,
+                        'comment' => 'Acknowledgement Status',
+                    ]
+                );
+            $installer->endSetup();
         }
     }
 }

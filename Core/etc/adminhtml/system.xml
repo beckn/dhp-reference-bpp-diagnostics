@@ -152,6 +152,21 @@
                     <backend_model>Beckn\Core\Model\Config\FulfillmentType\Options</backend_model>
                 </field>
             </group>
+            <group id="fulfillment_status" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Fulfillment Status</label>
+                <field id="fulfillment_status_type" type="select" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Select status update type</label>
+                    <source_model>Beckn\Core\Model\Config\Source\FulfillmentStatusType</source_model>
+                </field>
+                <field id="fulfillment_option" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Fields of fulfillment status</label>
+                    <depends>
+                        <field id="*/*/fulfillment_status_type">manual_update</field>
+                    </depends>
+                    <frontend_model>Beckn\Core\Block\Adminhtml\FulfillmentStatusType\Options</frontend_model>
+                    <backend_model>Beckn\Core\Model\Config\FulfillmentStatusType\Options</backend_model>
+                </field>
+            </group>
         </section>
         <section id="signature_config" translate="label" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
             <class>separator-top</class>

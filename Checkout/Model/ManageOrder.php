@@ -137,16 +137,19 @@ class ManageOrder
 
         $fulfillment["state"] = [
             "descriptor" => [
-                "name" => $this->getOrderStaticStatus($order->getCreatedAt())
+                "name" => $this->getFulfillmentStatus($order->getData("fulfillment_status")),
+                "code" => ($order->getData("fulfillment_status")=="") ? Helper::PACKING_ORDER : $order->getData("fulfillment_status"),
             ]
         ];
         $fulfillment["tags"] = [
-            "meetingLink" => "http://meet.google.com/kfk-oncb-skk"
+            //"meetingLink" => "http://meet.google.com/kfk-oncb-skk"
+            "meetingLink" => $order->getData("tracking_link"),
         ];
         
         return [
             "id" => $order->getIncrementId(),
-            "state" => $order->getStatusLabel(),
+            //"state" => $order->getStatusLabel(),
+            "state" => $this->_helper->getOrderStatusByCode($order->getState()),
             "provider" => $providerDetails,
             "provider_location" => [
                 "id" => $providerLocation["id"]
@@ -157,6 +160,14 @@ class ManageOrder
             "quote" => $this->_manageCart->getOrderTotalSegment($order),
             "payment" => $this->_manageCheckout->getPaymentData($status, $order->getGrandTotal(), $order->getOrderCurrencyCode(), $params)
         ];
+    }
+
+    /**
+     * @param $fulfillmentStatus
+     * @return mixed|string
+     */
+    public function getFulfillmentStatus($fulfillmentStatus){
+        return $this->_helper->getFulfillmentStatusByCode($fulfillmentStatus);
     }
 
     /**
@@ -200,15 +211,19 @@ class ManageOrder
              */
             foreach ($allVisibleItems as $eachItem) {
                 $finalItems[] = [
-                    "id" => $eachItem->getSku(),
+                    "id" => $eachItem->getId(),
                     "price" => [
                         "currency" => $order->getOrderCurrencyCode(),
-                        "value" => $eachItem->getPrice()
+                        "value" => $this->_helper->formatPrice($eachItem->getPrice())
                     ],
                     "quantity" => [
                         "selected" => [
                             "count" => $eachItem->getQtyOrdered()
                         ]
+                    ],
+                    "descriptor" => [
+                        "code" => $eachItem->getSku(),
+                        "name" => $eachItem->getName()
                     ]
                 ];
             }

@@ -44,12 +44,10 @@ class SearchRepository implements \Beckn\Search\Api\SearchRepositoryInterface
      * @var CategoryFactory
      */
     protected $_categoryFactory;
-
     /**
      * @var MagentoCoreSearch
      */
     protected $_magentoCoreSearch;
-
     /**
      * @var SearchCriteriaInterfaceFactory
      */
@@ -144,6 +142,7 @@ class SearchRepository implements \Beckn\Search\Api\SearchRepositoryInterface
                 $acknowledge["message"]["ack"]["status"] = Helper::NACK;
                 $acknowledge["error"] = $errorAcknowledge;
             }
+            $this->_helper->apiResponseEvent($context, $acknowledge);
             echo json_encode($acknowledge);
             session_write_close();
             fastcgi_finish_request();
@@ -307,7 +306,7 @@ class SearchRepository implements \Beckn\Search\Api\SearchRepositoryInterface
         if ($product->getPricePolicyBpp() != "") {
             $price = $this->_helper->getPriceFromPolicy($product->getPricePolicyBpp());
             if ($price != "") {
-                $productData["price"]["value"] = $price;
+                $productData["price"]["value"] = $this->_helper->formatPrice($price);
             }
         }
         $productStoreId = $product->getProductStoreBpp();
@@ -349,28 +348,30 @@ class SearchRepository implements \Beckn\Search\Api\SearchRepositoryInterface
      * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getCategoryData($allCategory){
-        /**
-         * @var \Magento\Catalog\Model\ResourceModel\Category\Collection $categoryCollection
-         */
-        $categoryCollection = $this->_categoryCollectionFactory->create();
-        $categoryCollection->addAttributeToSelect('*')
-            ->addFieldToFilter("entity_id", ["IN", $allCategory]);
         $allCategoryData = [];
-        /**
-         * @var \Magento\Catalog\Model\Category $_category
-         */
-        foreach ($categoryCollection as $_category){
-            $eachCategory = [];
-            $eachCategory["id"] = $_category->getId();
-            $eachCategory["descriptor"] = [
-                "name" => $_category->getName(),
-                "short_desc" => (string)$_category->getData("description"),
-                "images" => [$this->getCategoryImage($_category->getData("image"))]
-            ];
-            if($_category->getParentId()!=2){
-                $eachCategory["parent_category_id"] = $_category->getParentId();
+        if(!empty($allCategory)){
+            /**
+             * @var \Magento\Catalog\Model\ResourceModel\Category\Collection $categoryCollection
+             */
+            $categoryCollection = $this->_categoryCollectionFactory->create();
+            $categoryCollection->addAttributeToSelect('*')
+                ->addFieldToFilter("entity_id", ["IN", $allCategory]);
+            /**
+             * @var \Magento\Catalog\Model\Category $_category
+             */
+            foreach ($categoryCollection as $_category){
+                $eachCategory = [];
+                $eachCategory["id"] = $_category->getId();
+                $eachCategory["descriptor"] = [
+                    "name" => $_category->getName(),
+                    "short_desc" => (string)$_category->getData("description"),
+                    "images" => [$this->getCategoryImage($_category->getData("image"))]
+                ];
+                if($_category->getParentId()!=2){
+                    $eachCategory["parent_category_id"] = $_category->getParentId();
+                }
+                $allCategoryData[] = $eachCategory;
             }
-            $allCategoryData[] = $eachCategory;
         }
         return $allCategoryData;
     }

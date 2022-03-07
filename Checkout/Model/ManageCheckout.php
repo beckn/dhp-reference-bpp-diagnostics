@@ -281,7 +281,8 @@ class ManageCheckout
     public function prepareOnConfirmResponse(OrderInterface $order, array $message, string $status)
     {
         try {
-            $finalItems = $message["order"]["items"];
+            //$finalItems = $message["order"]["items"];
+            $finalItems = $this->getAllOrderItems($order);
             $totalSegment = $this->_manageCart->getOrderTotalSegment($order);
             $availableStoreId = $this->_manageCart->getOrderProductStoreId($order);
             $providerDetails = $this->_helper->getProvidersDetails([], $availableStoreId);
@@ -313,6 +314,44 @@ class ManageCheckout
     }
 
     /**
+     * @param Order $order
+     * @return array
+     * @throws NoSuchEntityException
+     */
+    public function getAllOrderItems(Order $order)
+    {
+        try {
+            $allVisibleItems = $order->getAllVisibleItems();
+            $finalItems = [];
+            /**
+             * @var \Magento\Sales\Model\Order\Item $eachItem
+             */
+            foreach ($allVisibleItems as $eachItem) {
+                $finalItems[] = [
+                    "id" => $eachItem->getId(),
+                    "price" => [
+                        "currency" => $order->getOrderCurrencyCode(),
+                        "value" => $this->_helper->formatPrice($eachItem->getPrice())
+                    ],
+                    "quantity" => [
+                        "selected" => [
+                            "count" => $this->_helper->formatQty($eachItem->getQtyOrdered())
+                        ]
+                    ],
+                    "descriptor" => [
+                        "code" => $eachItem->getSku(),
+                        "name" => $eachItem->getName(),
+                        "images" => $this->_helper->getProductMediaGallery($eachItem->getSku()),
+                    ]
+                ];
+            }
+            return $finalItems;
+        } catch (NoSuchEntityException $ex) {
+            throw new NoSuchEntityException(__($ex->getMessage()));
+        }
+    }
+
+    /**
      * @param string $status
      * @param $grandTotal
      * @param $currency
@@ -324,7 +363,7 @@ class ManageCheckout
         $paymentType = $this->_helper->getConfigData(Helper::XML_PATH_SELECTED_PAYMENT_TYPE);
         $paymentData = [
             "params" => [
-                "amount" => $grandTotal,
+                "amount" => $this->_helper->formatPrice($grandTotal),
                 "currency" => $currency,
             ],
             "type" => $paymentType,
@@ -352,6 +391,7 @@ class ManageCheckout
         $quoteMaskData = $this->_becknQuoteMask->loadByTransactionId($transactionId);
         if (!empty($quoteMaskData)) {
             $quoteMask = $this->_becknQuoteMask->load($quoteMaskData["entity_id"]);
+            $quoteMask->setRequestBody(json_encode($this->_helper->getRestApiData()));
             $quoteMask->setStatus(0)->save();
         }
         return false;
